@@ -1,0 +1,2 @@
+[linux]
+ct-test ansible_ssh_host=20.232.211.106 ansible_ssh_port=42781 
