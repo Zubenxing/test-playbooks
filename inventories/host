@@ -1,2 +1,7 @@
+
 [linux]
-ct-test ansible_ssh_host=20.232.211.106 ansible_ssh_port=42781 
+host1 ansible_host=172.26.84.81
+
+[linux:root]
+ansible_user=root
+#ansible_ssh_pass=vagrant
