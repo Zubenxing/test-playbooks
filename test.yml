@@ -1,15 +1,19 @@
 ---
-- name: Execute shell command and save results with Awk
+- name: Check and update packages
   hosts: all
   gather_facts: yes
   tasks:
-    - name: 将当前包信息储存到变量中
-      shell: yum check-update
-      register: shell_output
+    # 检查可更新的软件包，并将结果保存到变量中
+    - name: Check for available package updates
+      yum:
+        list: updates
+      register: available_updates
 
-    - name: 提取每行前两列并保存到文件
+    # 提取需要更新的软件包信息并保存到文件
+    - name: Save package names and versions to a file
       copy:
-        content: "{{ item.split()[:2] | join(' ') }}"
-        dest: /tmp/yum_output.txt
-        mode: '0644'
-      loop: "{{ shell_output.stdout_lines }}"
+        content: |
+          {% for package in available_updates.results %}
+          {{ package.name }}-{{ package.version }}
+          {% endfor %}
+        dest: /tmp/available_updates.txt
