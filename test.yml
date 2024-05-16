@@ -12,11 +12,10 @@
     # 提取需要更新的软件包信息并保存到文件
     - name: Save package names and versions to a file
       copy:
-        content: |                                        # content 参数用于指定要写入目标文件的内容
-          {% for package in available_updates.results %}  # Jinja2 模板中的循环语句，遍历 available_updates.results 变量中的每个元素
-          {{ package.name }}-{{ package.version }}        # 用于提取软件包对象中的名称和版本属性
-          {% endfor %}                                    # 循环结束语句，告诉模板引擎停止遍历
-
+        content: |
+          {% for package in available_updates.results %}
+          {{ package.name }}-{{ package.version }}  # 提取软件包名和版本号
+          {% endfor %}
         dest: /tmp/available_updates.txt  # 文件保存路径
 
     # 更新软件包到最新版本，排除内核
@@ -31,7 +30,7 @@
     - name: Save updated package names and versions to a file
       copy:
         content: |
-          {% for package in updated_packages.register %}
-          {{ package.name }}-{{ package.version }}  # 包名和版本号
+          {% for package1 in updated_packages.results %}
+          {{ package1.name }}-{{ package1.version }}  # 提取软件包名和版本号
           {% endfor %}
         dest: /tmp/updated_packages.txt  # 文件保存路径
