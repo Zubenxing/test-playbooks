@@ -5,7 +5,7 @@
 
     - name: 检测源信息
       shell: |
-        if cat /etc/yum.repos.d/CentOS-Base.repo | grep -q "baseurl=http://olcentgbl.trafficmanager.net"; then
+        if cat /etc/yum.repos.d/CentOS-Base.repo | grep -q "baseurl=http://mirrors.aliyun.com/centos"; then
           exit 0  # 如果找到源信息中包含特定URL，则返回0表示成功，跳过备份
         else
           exit 1  # 如果源信息中不包含特定URL，则返回非0值表示失败，执行备份
@@ -18,7 +18,7 @@
         current_datetime=$(date +'%Y%m%d%H%M%S')
         if [ -f /etc/yum.repos.d/CentOS-Base.repo ]; then
           mv /etc/yum.repos.d/CentOS-Base.repo /etc/yum.repos.d/CentOS-Base.repo.${current_datetime}
-          wget -O /etc/yum.repos.d/CentOS-Base.repo https://ftp.kiosoft.com/base-repo/CentOS-Base.repo
+          wget -O /etc/yum.repos.d/CentOS-Base.repo http://mirrors.aliyun.com/repo/Centos-7.repo
         fi
         if [ -f /etc/yum.repos.d/OpenLogic.repo ]; then
           mv /etc/yum.repos.d/OpenLogic.repo /etc/yum.repos.d/OpenLogic.repo.${current_datetime}
