@@ -1,5 +1,6 @@
 
 - name: 更新指定的软件包
+  host: all
   tasks:
 
     - name: 检测源信息
