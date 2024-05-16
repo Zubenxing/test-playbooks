@@ -1,5 +1,5 @@
 - name: 更新指定的软件包
-  hosts: test
+  hosts: all
   gather_facts: yes
   tasks:
 
