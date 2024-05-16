@@ -1,0 +1,16 @@
+---
+- name: Execute shell command and save results with Awk
+  hosts: all
+  gather_facts: yes
+  tasks:
+    - name: 将当前包信息储存到变量中
+      shell: yum check-update
+      register: shell_output
+      changed_when: false
+
+    - name: 将旧包的信息输出到目录中
+      copy:
+        content: "{{ item.split()[0] }} {{ item.split()[1] }}"
+        dest: "/tmp/shell_output.txt"
+        mode: "0644"
+      loop: "{{ shell_output.stdout_lines }}"
