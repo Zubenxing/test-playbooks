@@ -1,0 +1,23 @@
+- name: 获取当前已安装的软件包列表及其版本信息
+  command: yum list installed
+  register: installed_packages
+
+- name: 保存当前已安装的软件包列表及其版本信息到文件
+  copy:
+    content: "{{ installed_packages.stdout }}"
+    dest: /tmp/yum_package_old
+    backup: yes
+
+- name: 更新补丁包
+  yum:
+    name: "{{ item }}"
+    state: latest
+    list: yes
+  loop: "{{ packages_to_check }}"
+  register: updated_packages
+
+- name: 显示更新的软件包及其版本信息
+  debug:
+    msg: "Package: {{ item.name }}, Current Version: {{ item.old_version }}, Latest Version: {{ item.new_version }}"
+  loop: "{{ updated_packages.results }}"
+  when: item.changed
