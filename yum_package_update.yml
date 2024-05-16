@@ -1,6 +1,6 @@
-
 - name: 更新指定的软件包
-  host: all
+  hosts: all
+  gather_facts: yes
   tasks:
 
     - name: 检测源信息
@@ -18,22 +18,14 @@
         current_datetime=$(date +'%Y%m%d%H%M%S')
         if [ -f /etc/yum.repos.d/CentOS-Base.repo ]; then
           mv /etc/yum.repos.d/CentOS-Base.repo /etc/yum.repos.d/CentOS-Base.repo.${current_datetime}
+          wget -O /etc/yum.repos.d/CentOS-Base.repo https://ftp.kiosoft.com/base-repo/CentOS-Base.repo
         fi
         if [ -f /etc/yum.repos.d/OpenLogic.repo ]; then
           mv /etc/yum.repos.d/OpenLogic.repo /etc/yum.repos.d/OpenLogic.repo.${current_datetime}
+          wget -O /etc/yum.repos.d/OpenLogic.repo https://ftp.kiosoft.com/base-repo/OpenLogic.repo
         fi
       when: check_repo.rc == 1  # 仅当检测源信息的任务返回非0值（即未找到特定URL）时执行备份
       ignore_errors: yes
-
-
-    - name: wget CentOS-Base.repo
-      shell: "wget -O /etc/yum.repos.d/CentOS-Base.repo https://ftp.kiosoft.com/base-repo/CentOS-Base.repo"
-
-    - name: wget openlogic.repo
-      shell: "wget -O /etc/yum.repos.d/CentOS-Base.repo https://ftp.kiosoft.com/base-repo/OpenLogic.repo"
-
-    - name: 生效yum源
-      shell: yum clean all && yum makecache
 
 
 
