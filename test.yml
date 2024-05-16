@@ -30,7 +30,7 @@
     - name: Save updated package names and versions to a file
       copy:
         content: |
-          {% for package in updated_packages %}
+          {% for package in updated_packages.register %}
           {{ package.name }}-{{ package.version }}  # 提取软件包名和版本号
           {% endfor %}
         dest: /tmp/updated_packages.txt  # 文件保存路径
