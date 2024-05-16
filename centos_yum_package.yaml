@@ -1,6 +1,4 @@
 - name: 更新指定的软件包
-  hosts: all
-  gather_facts: yes
   tasks:
 
     - name: 检测源信息
