@@ -1,23 +1,31 @@
-- name: 获取当前已安装的软件包列表及其版本信息
-  command: yum list installed
-  register: installed_packages
+---
+- name: 更新指定的软件包
+  hosts: all
+  gather_facts: yes
+  tasks:
+    - name: 获取当前已安装的软件包列表并保存到文件
+      command: yum list installed
+      register: installed_packages
 
-- name: 保存当前已安装的软件包列表及其版本信息到文件
-  copy:
-    content: "{{ installed_packages.stdout }}"
-    dest: /tmp/yum_package_old
-    backup: yes
+    - name: 保存当前已安装的软件包列表到文件
+      copy:
+        content: "{{ installed_packages.stdout }}"
+        dest: /tmp/yum_package_old
+        backup: yes
 
-- name: 更新补丁包
-  yum:
-    name: "{{ item }}"
-    state: latest
-    list: yes
-  loop: "{{ packages_to_check }}"
-  register: updated_packages
+    - name: 获取需要更新的软件包列表
+      shell: yum check-update --quiet | grep -v kernel
+      register: updates_available
 
-- name: 显示更新的软件包及其版本信息
-  debug:
-    msg: "Package: {{ item.name }}, Current Version: {{ item.old_version }}, Latest Version: {{ item.new_version }}"
-  loop: "{{ updated_packages.results }}"
-  when: item.changed
+    - name: 升级软件包到最新版本
+      yum:
+        name: "{{ item.split()[0] }}"
+        state: latest
+      loop: "{{ updates_available.stdout_lines }}"
+
+    - name: 获取更新后软件包的最新版本号并保存到文件
+      shell: |
+        for pkg in "{{ updates_available.stdout_lines }}"; do
+          yum info $pkg | grep Version | awk '{print $3}' >> /tmp/latest_package_versions.txt
+        done
+      loop: "{{ updates_available.stdout_lines }}"
