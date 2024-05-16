@@ -23,13 +23,9 @@
       yum:
         name: "*"       # 更新所有软件包
         state: latest   # 将软件包更新到最新版本
-        exclude: kernel*  # 排除以 "kernel" 开头的软件包
+     #   exclude: kernel*  # 排除以 "kernel" 开头的软件包
       register: updated_packages
 
-    # Debug updated_packages variable
-    - name: Debug updated_packages variable
-      debug:
-        var: updated_packages
 
     # 将已更新的软件包信息保存到文件
     - name: Save updated package names and versions to a file
