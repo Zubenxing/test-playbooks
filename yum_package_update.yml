@@ -5,7 +5,7 @@
 
     - name: 检测源信息
       shell: |
-        if cat /etc/yum.repos.d/CentOS-Base.repo | grep -q "baseurl=http://mirrors.aliyun.com/centos"; then
+        if cat /etc/yum.repos.d/CentOS-Base.repo | grep -q "baseurl=http://olcentgbl.trafficmanager.net"; then
           exit 0  # 如果找到源信息中包含特定URL，则返回0表示成功，跳过备份
         else
           exit 1  # 如果源信息中不包含特定URL，则返回非0值表示失败，执行备份
@@ -18,13 +18,13 @@
         current_datetime=$(date +'%Y%m%d%H%M%S')
         if [ -f /etc/yum.repos.d/CentOS-Base.repo ]; then
           mv /etc/yum.repos.d/CentOS-Base.repo /etc/yum.repos.d/CentOS-Base.repo.${current_datetime}
-          wget -O /etc/yum.repos.d/CentOS-Base.repo http://mirrors.aliyun.com/repo/Centos-7.repo
+          wget -O /etc/yum.repos.d/CentOS-Base.repo https://ftp.kiosoft.com/base-repo/CentOS-Base.repo
         fi
         if [ -f /etc/yum.repos.d/OpenLogic.repo ]; then
           mv /etc/yum.repos.d/OpenLogic.repo /etc/yum.repos.d/OpenLogic.repo.${current_datetime}
           wget -O /etc/yum.repos.d/OpenLogic.repo https://ftp.kiosoft.com/base-repo/OpenLogic.repo
         fi
-      when: check_repo.rc == 1  # 仅当检测源信息的任务返回非0值（即未找到特定URL）时执行备份
+      when: check_repo.rc == 1  # 仅当检测源信息的任务返回非0值（即未找到特定URL）时执行备份  .rc 表示 "return code"，它包含了命令执行结束时的状态码
       ignore_errors: yes
 
 
