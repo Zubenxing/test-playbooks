@@ -1,0 +1,401 @@
+
+- name: 更新指定的软件包
+  tasks:
+
+    - name: 检测源信息
+      shell: |
+        if cat /etc/yum.repos.d/CentOS-Base.repo | grep -q "baseurl=http://olcentgbl.trafficmanager.net"; then
+          exit 0  # 如果找到源信息中包含特定URL，则返回0表示成功，跳过备份
+        else
+          exit 1  # 如果源信息中不包含特定URL，则返回非0值表示失败，执行备份
+        fi
+      register: check_repo
+      ignore_errors: true
+
+    - name: 备份之前yum源
+      shell: |
+        current_datetime=$(date +'%Y%m%d%H%M%S')
+        if [ -f /etc/yum.repos.d/CentOS-Base.repo ]; then
+          mv /etc/yum.repos.d/CentOS-Base.repo /etc/yum.repos.d/CentOS-Base.repo.${current_datetime}
+        fi
+        if [ -f /etc/yum.repos.d/OpenLogic.repo ]; then
+          mv /etc/yum.repos.d/OpenLogic.repo /etc/yum.repos.d/OpenLogic.repo.${current_datetime}
+        fi
+      when: check_repo.rc == 1  # 仅当检测源信息的任务返回非0值（即未找到特定URL）时执行备份
+      ignore_errors: yes
+
+
+    - name: wget CentOS-Base.repo
+      shell: "wget -O /etc/yum.repos.d/CentOS-Base.repo https://ftp.kiosoft.com/base-repo/CentOS-Base.repo"
+
+    - name: wget openlogic.repo
+      shell: "wget -O /etc/yum.repos.d/CentOS-Base.repo https://ftp.kiosoft.com/base-repo/OpenLogic.repo"
+
+    - name: 生效yum源
+      shell: yum clean all && yum makecache
+
+
+
+    - name: 获取已安装的软件包列表
+      command: "yum list installed"
+      register: yum_output
+
+
+    - name: 检查软件包是否已在所有服务器中安装
+      set_fact:
+        all_installed: true
+      loop: "{{ packages_to_check }}"
+      when: "'{{ item }}' not in yum_output.stdout_lines"
+      register: check_installed
+
+    - name: 更新补丁包
+      yum:
+        name: "{{ item }}"
+        state: present
+      loop: "{{ check_installed.results | rejectattr('skipped', 'undefined') | map(attribute='item') | list }}"
+      when: all_installed
+      ignore_errors: yes
+
+  vars:
+    packages_to_check:
+      - python3-3.6.8-21.el7_9.x86_64
+      - python3-libs-3.6.8-21.el7_9.x86_64
+      - bpftool-3.10.0-1160.114.2.el7.x86_64
+      - datadog-agent-1:7.52.1-1.x86_64
+      - fluent-bit-2.2.2-1.x86_64
+      - bpftool-3.10.0-1160.114.2.el7.x86_64
+      - datadog-agent-1:7.52.1-1.x86_64
+      - fluent-bit-2.2.2-1.x86_64
+      - iwl100-firmware-39.31.5.1-82.el7_9.noarch
+      - iwl1000-firmware-39.31.5.1-82.el7_9.noarch
+      - iwl105-firmware-18.168.6.1-80.el7_9.noarch
+      - iwl135-firmware-18.168.6.1-82.el7_9.noarch
+      - iwl2000-firmware-18.168.6.1-82.el7_9.noarch
+      - iwl2030-firmware-18.168.6.1-82.el7_9.noarch
+      - iwl3160-firmware-25.30.13.0-82.el7_9.noarch
+      - iwl3945-firmware-15.32.2.9-82.el7_9.noarch
+      - iwl4965-firmware-228.61.2.24-82.el7_9.noarch
+      - iwl5000-firmware-8.83.5.1_1-82.el7_9.noarch
+      - iwl5150-firmware-8.24.2.2-82.el7_9.noarch
+      - iwl6000-firmware-9.221.4.1-82.el7_9.noarch
+      - iwl6000g2a-firmware-18.168.6.1-82.el7_9.noarch
+      - iwl6000g2b-firmware-18.168.6.1-82.el7_9.noarch
+      - iwl6050-firmware-41.28.5.1-82.el7_9.noarch
+      - iwl7260-firmware-25.30.13.0-82.el7_9.noarch
+      - java-1.8.0-openjdk-1.8.0.402.b06-1.el7_9.x86_64
+      - java-1.8.0-openjdk-headless-1.8.0.402.b06-1.el7_9.x86_64
+      - libX11-1.6.7-5.el7_9.x86_64
+      - libX11-common-1.6.7-5.el7_9.noarch
+      - libX11-devel-1.6.7-5.el7_9.x86_64
+      - libsss_idmap-1.16.5-10.el7_9.16.x86_64
+      - libsss_nss_idmap-1.16.5-10.el7_9.16.x86_64
+      - linux-firmware-20200421-82.git78c0348.el7_9.noarch
+      - lm_sensors-devel-3.4.0-8.20160601gitf9185e5.el7_9.1.x86_64
+      - lm_sensors-libs-3.4.0-8.20160601gitf9185e5.el7_9.1.x86_64
+      - microcode_ctl-2.1-73.20.el7_9.x86_64
+      - net-snmp-libs-5.7.2-49.el7_9.4.x86_64
+      - net-snmp-python-5.7.2-49.el7_9.4.x86_64
+      - net-snmp-utils-5.7.2-49.el7_9.4.x86_64
+      - newrelic-daemo-10.19.0.9-1.x86_64
+      - newrelic-infra-1.52.0-1.el7.x86_64
+      - newrelic-php5-10.19.0.9-1.x86_64
+      - newrelic-php5-common-10.19.0.9-1.noarch
+      - nri-mysql-1.10.7-1.x86_64
+      - omi-1.9.0-0.x86_64
+      - pmm2-client-2.41.2-6.el7.x86_64
+      - postgresql-libs-9.2.24-9.el7_9.x86_64
+      - python-2.7.5-94.el7_9.x86_64
+      - python-libs-2.7.5-94.el7_9.x86_64
+      - python-perf-3.10.0-1160.114.2.el7.x86_64
+      - scx-1.9.0-0.x86_64
+      - snap-confine-2.61.2-0.el7.x86_64
+      - snapd-2.61.2-0.el7.x86_64
+      - snapd-selinux-2.61.2-0.el7.noarch
+      - sos-3.9-5.el7.centos.12.noarch
+      - sssd-client-1.16.5-10.el7_9.16.x86_64
+      - systemd-219-78.el7_9.9.x86_64
+      - systemd-libs-219-78.el7_9.9.x86_64
+      - systemd-python-219-78.el7_9.9.x86_64
+      - systemd-sysv-219-78.el7_9.9.x86_64
+      - tzdata-2024a-1.el7.noarch
+      - tzdata-java-2024a-1.el7.noarch
+      - xfsdump-3.1.7-4.el7_9.x86_64
+      - GeoIP-1.5.0-14.el7.x86_64
+      - GeoIP-1.5.0-14.el7.x86_64
+      - NetworkManager-1:1.18.8-2.el7_9.x86_64
+      - NetworkManager-libnm-1:1.18.8-2.el7_9.x86_64
+      - NetworkManager-team-1:1.18.8-2.el7_9.x86_64
+      - NetworkManager-tui-1:1.18.8-2.el7_9.x86_64
+      - WALinuxAgent-2.7.3.0-1_ol001.el7.noarch
+      - abrt-2.1.11-60.el7.centos.x86_64
+      - abrt-addon-ccpp-2.1.11-60.el7.centos.x86_64
+      - abrt-addon-kerneloops-2.1.11-60.el7.centos.x86_64
+      - abrt-addon-pstoreoops-2.1.11-60.el7.centos.x86_64
+      - abrt-addon-python-2.1.11-60.el7.centos.x86_64
+      - abrt-addon-vmcore-2.1.11-60.el7.centos.x86_64
+      - abrt-addon-xorg-2.1.11-60.el7.centos.x86_64
+      - abrt-cli-2.1.11-60.el7.centos.x86_64
+      - abrt-console-notification-2.1.11-60.el7.centos.x86_64
+      - abrt-dbus-2.1.11-60.el7.centos.x86_64
+      - abrt-libs-2.1.11-60.el7.centos.x86_64
+      - abrt-python-2.1.11-60.el7.centos.x86_64
+      - abrt-retrace-client-2.1.11-60.el7.centos.x86_64
+      - abrt-tui-2.1.11-60.el7.centos.x86_64
+      - acl-2.2.51-15.el7.x86_64
+      - alsa-lib-1.1.8-1.el7.x86_64
+      - at-3.1.13-25.el7_9.x86_64
+      - augeas-libs-1.4.0-10.el7.x86_64
+      - avahi-libs-0.6.31-20.el7.x86_64
+      - bash-4.2.46-35.el7_9.x86_64
+      - bash-completion-1:2.1-8.el7.noarch
+      - bind-libs-32:9.11.4-26.P2.el7_9.15.x86_64
+      - bind-libs-lite-32:9.11.4-26.P2.el7_9.15.x86_64
+      - bind-license-32:9.11.4-26.P2.el7_9.15.noarch
+      - bind-utils-32:9.11.4-26.P2.el7_9.15.x86_64
+      - binutils-2.27-44.base.el7_9.1.x86_64
+      - biosdevname-0.7.3-2.el7.x86_64
+      - blktrace-1.0.5-9.el7.x86_64
+      - boost-date-time-1.53.0-28.el7.x86_64
+      - boost-system-1.53.0-28.el7.x86_64
+      - boost-thread-1.53.0-28.el7.x86_64
+      - bpftool-3.10.0-1160.114.2.el7.x86_64
+      - ca-certificates-2023.2.60_v7.0.306-72.el7_9.noarch
+      - centos-release-7-9.2009.1.el7.centos.x86_64
+      - chkconfig-1.7.6-1.el7.x86_64
+      - chrony-3.4-1.el7.x86_64
+      - coreutils-8.22-24.el7_9.2.x86_64
+      - cpio-2.11-28.el7.x86_64
+      - cronie-1.4.11-25.el7_9.x86_64
+      - cronie-anacron-1.4.11-25.el7_9.x86_64
+      - cryptsetup-2.0.3-6.el7.x86_64
+      - cryptsetup-libs-2.0.3-6.el7.x86_64
+      - cups-libs-1:1.6.3-52.el7_9.x86_64
+      - curl-7.29.0-59.el7_9.2.x86_64
+      - cyrus-sasl-lib-2.1.26-24.el7_9.x86_64
+      - cyrus-sasl-plain-2.1.26-24.el7_9.x86_64
+      - dbus-1:1.10.24-15.el7.x86_64
+      - dbus-libs-1:1.10.24-15.el7.x86_64
+      - desktop-file-utils-0.23-2.el7.x86_64
+      - device-mapper-7:1.02.170-6.el7_9.5.x86_64
+      - device-mapper-event-7:1.02.170-6.el7_9.5.x86_64
+      - device-mapper-event-libs-7:1.02.170-6.el7_9.5.x86_64
+      - device-mapper-libs-7:1.02.170-6.el7_9.5.x86_64
+      - device-mapper-persistent-data-0.8.5-3.el7_9.2.x86_64
+      - dhclient-12:4.2.5-83.el7.centos.1.x86_64
+      - dhcp-common-12:4.2.5-83.el7.centos.1.x86_64
+      - dhcp-libs-12:4.2.5-83.el7.centos.1.x86_64
+      - diffutils-3.3-6.el7_9.x86_64
+      - dmidecode-1:3.2-5.el7_9.1.x86_64
+      - dracut-033-572.el7.x86_64
+      - dracut-network-033-572.el7.x86_64
+      - dyninst-9.3.1-3.el7.x86_64
+      - efivar-libs-36-12.el7.x86_64
+      - elfutils-0.176-5.el7.x86_64
+      - elfutils-default-yama-scope-0.176-5.el7.noarch
+      - elfutils-libelf-0.176-5.el7.x86_64
+      - elfutils-libs-0.176-5.el7.x86_64
+      - emacs-filesystem-1:24.3-23.el7_9.1.noarch
+      - epel-release-7-14.noarch
+      - ethtool-2:4.8-10.el7.x86_64
+      - expat-2.1.0-15.el7_9.x86_64
+      - file-5.11-37.el7.x86_64
+      - file-libs-5.11-37.el7.x86_64
+      - firewalld-0.6.3-13.el7_9.noarch
+      - firewalld-filesystem-0.6.3-13.el7_9.noarch
+      - gdb-7.6.1-120.el7.x86_64
+      - gettext-0.19.8.1-3.el7.x86_64
+      - gettext-libs-0.19.8.1-3.el7.x86_64
+      - gpm-libs-1.20.7-6.el7.x86_64
+      - grub2-1:2.02-0.87.0.2.el7.centos.11.x86_64
+      - grub2-common-1:2.02-0.87.0.2.el7.centos.11.noarch
+      - grub2-efi-x64-1:2.02-0.87.0.2.el7.centos.11.x86_64
+      - grub2-pc-1:2.02-0.87.0.2.el7.centos.11.x86_64
+      - grub2-pc-modules-1:2.02-0.87.0.2.el7.centos.11.noarch
+      - grub2-tools-1:2.02-0.87.0.2.el7.centos.11.x86_64
+      - grub2-tools-extra-1:2.02-0.87.0.2.el7.centos.11.x86_64
+      - grub2-tools-minimal-1:2.02-0.87.0.2.el7.centos.11.x86_64
+      - grubby-8.28-26.el7.x86_64
+      - gzip-1.5-11.el7_9.x86_64
+      - hostname-3.13-3.el7_7.1.x86_64
+      - hunspell-1.3.2-16.el7.x86_64
+      - hwdata-0.252-9.7.el7.x86_64
+      - initscripts-9.49.53-1.el7_9.1.x86_64
+      - iproute-4.11.0-30.el7.x86_64
+      - iprutils-2.4.17.1-3.el7_7.x86_64
+      - ipset-7.1-1.el7.x86_64
+      - ipset-libs-7.1-1.el7.x86_64
+      - iptables-1.4.21-35.el7.x86_64
+      - irqbalance-3:1.0.7-12.el7.x86_64
+      - iwl100-firmware-39.31.5.1-82.el7_9.noarch
+      - iwl1000-firmware-1:39.31.5.1-82.el7_9.noarch
+      - iwl105-firmware-18.168.6.1-82.el7_9.noarch
+      - iwl135-firmware-18.168.6.1-82.el7_9.noarch
+      - iwl2000-firmware-18.168.6.1-82.el7_9.noarch
+      - iwl2030-firmware-18.168.6.1-82.el7_9.noarch
+      - iwl3160-firmware-25.30.13.0-82.el7_9.noarch
+      - iwl3945-firmware-15.32.2.9-82.el7_9.noarch
+      - iwl4965-firmware-228.61.2.24-82.el7_9.noarch
+      - iwl5000-firmware-8.83.5.1_1-82.el7_9.noarch
+      - iwl5150-firmware-8.24.2.2-82.el7_9.noarch
+      - iwl6000-firmware-9.221.4.1-82.el7_9.noarch
+      - iwl6000g2a-firmware-18.168.6.1-82.el7_9.noarch
+      - iwl6000g2b-firmware-18.168.6.1-82.el7_9.noarch
+      - iwl6050-firmware-41.28.5.1-82.el7_9.noarch
+      - iwl7260-firmware-25.30.13.0-82.el7_9.noarch
+      - kbd-1.15.5-16.el7_9.x86_64
+      - kbd-legacy-1.15.5-16.el7_9.noarch
+      - kbd-misc-1.15.5-16.el7_9.noarch
+      - kexec-tools-2.0.15-51.el7_9.3.x86_64
+      - kmod-20-28.el7.x86_64
+      - kmod-kvdo-6.1.3.23-5.el7.x86_64
+      - kmod-libs-20-28.el7.x86_64
+      - kpartx-0.4.9-136.el7_9.x86_64
+      - kpatch-0.6.1-6.el7.noarch
+      - langtable-0.0.31-4.el7.noarch
+      - langtable-data-0.0.31-4.el7.noarch
+      - langtable-python-0.0.31-4.el7.noarch
+      - ledmon-0.92-1.el7.x86_64
+      - libacl-2.2.51-15.el7.x86_64
+      - libblkid-2.23.2-65.el7_9.1.x86_64
+      - libcap-2.22-11.el7.x86_64
+      - libcroco-0.6.12-6.el7_9.x86_64
+      - libcurl-7.29.0-59.el7_9.2.x86_64
+      - libcurl-devel-7.29.0-59.el7_9.2.x86_64
+      - libdb-5.3.21-25.el7.x86_64
+      - libdb-utils-5.3.21-25.el7.x86_64
+      - libdrm-2.4.97-2.el7.x86_64
+      - libffi-3.0.13-19.el7.x86_64
+      - libldb-1.5.4-2.el7.x86_64
+      - libmount-2.23.2-65.el7_9.1.x86_64
+      - libndp-1.2-9.el7.x86_64
+      - libpcap-14:1.5.3-13.el7_9.x86_64
+      - libreport-2.1.11-53.el7.centos.x86_64
+      - libreport-centos-2.1.11-53.el7.centos.x86_64
+      - libreport-cli-2.1.11-53.el7.centos.x86_64
+      - libreport-filesystem-2.1.11-53.el7.centos.x86_64
+      - libreport-plugin-mailx-2.1.11-53.el7.centos.x86_64
+      - libreport-plugin-mantisbt-2.1.11-53.el7.centos.x86_64
+      - libreport-plugin-rhtsupport-2.1.11-53.el7.centos.x86_64
+      - libreport-plugin-ureport-2.1.11-53.el7.centos.x86_64
+      - libreport-python-2.1.11-53.el7.centos.x86_64
+      - libreport-web-2.1.11-53.el7.centos.x86_64
+      - libseccomp-2.3.1-4.el7.x86_64
+      - libsmartcols-2.23.2-65.el7_9.1.x86_64
+      - libsss_idmap-1.16.5-10.el7_9.16.x86_64
+      - libsss_nss_idmap-1.16.5-10.el7_9.16.x86_64
+      - libstoragemgmt-1.8.1-2.el7_9.x86_64
+      - libstoragemgmt-python-1.8.1-2.el7_9.noarch
+      - libstoragemgmt-python-clibs-1.8.1-2.el7_9.x86_64
+      - libtalloc-2.1.16-1.el7.x86_64
+      - libtdb-1.3.18-1.el7.x86_64
+      - libteam-1.29-3.el7.x86_64
+      - libtevent-0.9.39-1.el7.x86_64
+      - libtirpc-0.2.4-0.16.el7.x86_64
+      - libuuid-2.23.2-65.el7_9.1.x86_64
+      - libwbclient-4.10.16-25.el7_9.x86_64
+      - linux-firmware-20200421-82.git78c0348.el7_9.noarch
+      - lm_sensors-libs-3.4.0-8.20160601gitf9185e5.el7_9.1.x86_64
+      - logrotate-3.8.6-19.el7.x86_64
+      - lshw-B.02.18-17.el7.x86_64
+      - lvm2-7:2.02.187-6.el7_9.5.x86_64
+      - lvm2-libs-7:2.02.187-6.el7_9.5.x86_64
+      - lz4-1.8.3-1.el7.x86_64
+      - make-1:3.82-24.el7.x86_64
+      - man-pages-overrides-7.9.0-1.el7.noarch
+      - mariadb-libs-1:5.5.68-1.el7.x86_64
+      - mdadm-4.1-9.el7_9.x86_64
+      - microcode_ctl-2:2.1-73.20.el7_9.x86_64
+      - mokutil-15-8.el7.x86_64
+      - net-tools-2.0-0.25
+      - nspr-4.35.0-1.el7_9.x86_64
+      - nss-3.90.0-2.el7_9.x86_64
+      - nss-pem-1.0.3-7.el7_9.1.x86_64
+      - nss-softokn-3.90.0-6.el7_9.x86_64
+      - nss-softokn-freebl-3.90.0-6.el7_9.x86_64
+      - nss-sysinit-3.90.0-2.el7_9.x86_64
+      - nss-tools-3.90.0-2.el7_9.x86_64
+      - nss-util-3.90.0-1.el7_9.x86_64
+      - ntpdate-4.2.6p5-29.el7.centos.2.x86_64
+      - ntsysv-1.7.6-1.el7.x86_64
+      - numactl-libs-2.0.12-5.el7.x86_64
+      - omi-1.9.0-0.x86_64
+      - openldap-2.4.44-25.el7_9.x86_64
+      - openssh-7.4p1-23.el7_9.x86_64
+      - openssh-clients-7.4p1-23.el7_9.x86_64
+      - openssh-server-7.4p1-23.el7_9.x86_64
+      - pam-1.1.8-23.el7.x86_64
+      - parted-3.1-32.el7.x86_64
+      - passwd-0.79-6.el7.x86_64
+      - perl-5.16.3-299.el7_9.x86_64
+      - perl-Pod-Escapes-1:1.04-299.el7_9.noarch
+      - perl-Socket-2.010-5.el7.x86_64
+      - perl-libs-4:5.16.3-299.el7_9.x86_64
+      - perl-macros-4:5.16.3-299.el7_9.x86_64
+      - plymouth-0.8.9-0.34.20140113.el7.centos.x86_64
+      - plymouth-core-libs-0.8.9-0.34.20140113.el7.centos.x86_64
+      - plymouth-scripts-0.8.9-0.34.20140113.el7.centos.x86_64
+      - polkit-0.112-26.el7_9.1.x86_64
+      - postfix-2:2.10.1-9.el7.x86_64
+      - procps-ng-3.3.10-28.el7.x86_64
+      - python-2.7.5-94.el7_9.x86_64
+      - python-chardet-2.2.1-3.el7.noarch
+      - python-firewall-0.6.3-13.el7_9.noarch
+      - python-libs-2.7.5-94.el7_9.x86_64
+      - python-linux-procfs-0.4.11-4.el7.noarch
+      - python-perf-3.10.0-1160.114.2.el7.x86_64
+      - python-urlgrabber-3.10-10.el7.noarch
+      - quota-1:4.01-19.el7.x86_64
+      - quota-nls-1:4.01-19.el7.noarch
+      - rng-tools-6.3.1-5.el7.x86_64
+      - rpcbind-0.2.0-49.el7.x86_64
+      - rpm-4.11.3-48.el7_9.x86_64
+      - rpm-build-libs-4.11.3-48.el7_9.x86_64
+      - rpm-libs-4.11.3-48.el7_9.x86_64
+      - rpm-python-4.11.3-48.el7_9.x86_64
+      - rsync-3.1.2-12.el7_9.x86_64
+      - rsyslog-8.24.0-57.el7_9.3.x86_64
+      - samba-client-libs-4.10.16-25.el7_9.x86_64
+      - samba-common-4.10.16-25.el7_9.noarch
+      - samba-common-libs-4.10.16-25.el7_9.x86_64
+      - scx-1.9.0-0.x86_64
+      - sed-4.2.2-7.el7.x86_64
+      - selinux-policy-3.13.1-268.el7_9.2.noarch
+      - selinux-policy-targeted-3.13.1-268.el7_9.2.noarch
+      - setup-2.8.71-11.el7.noarch
+      - sg3_utils-1:1.37-19.el7.x86_64
+      - sg3_utils-libs-1:1.37-19.el7.x86_64
+      - shadow-utils-2:4.6-5.el7.x86_64
+      - shared-mime-info-1.8-5.el7.x86_64
+      - shim-x64-15-8.el7.x86_64
+      - smartmontools-1:7.0-2.el7.x86_64
+      - sos-3.9-5.el7.centos.12.noarch
+      - sqlite-3.7.17-8.el7_7.1.x86_64
+      - sssd-client-1.16.5-10.el7_9.16.x86_64
+      - strace-4.24-7.el7_9.x86_64
+      - sudo-1.8.23-10.el7_9.3.x86_64
+      - sysstat-10.1.5-20.el7_9.x86_64
+      - systemd-219-78.el7_9.9.x86_64
+      - systemd-libs-219-78.el7_9.9.x86_64
+      - systemd-python-219-78.el7_9.9.x86_64
+      - systemd-sysv-219-78.el7_9.9.x86_64
+      - systemtap-runtime-4.0-13.el7.x86_64
+      - tcpdump-14:4.9.2-4.el7_7.1.x86_64
+      - tcsh-6.18.01-17.el7_9.1.x86_64
+      - teamd-1.29-3.el7.x86_64
+      - tuned-2.11.0-12.el7_9.noarch
+      - tzdata-2024a-1.el7.noarch
+      - unzip-6.0-24.el7_9.x86_64
+      - usermode-1.111-6.el7.x86_64
+      - util-linux-2.23.2-65.el7_9.1.x86_64
+      - vdo-6.1.3.23-5.el7.x86_64
+      - vim-common-2:7.4.629-8.el7_9.x86_64
+      - vim-enhanced-2:7.4.629-8.el7_9.x86_64
+      - vim-filesystem-2:7.4.629-8.el7_9.x86_64
+      - vim-minimal-2:7.4.629-8.el7_9.x86_64
+      - virt-what-1.18-4.el7_9.1.x86_64
+      - wpa_supplicant-1:2.6-12.el7_9.2.x86_64
+      - xfsdump-3.1.7-4.el7_9.x86_64
+      - xfsprogs-4.5.0-22.el7.x86_64
+      - yum-3.4.3-168.el7.centos.noarch
+      - yum-plugin-fastestmirror-1.1.31-54.el7_8.noarch
+      - yum-utils-1.1.31-54.el7_8.noarch`
