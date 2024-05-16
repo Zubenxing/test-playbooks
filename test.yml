@@ -2,14 +2,14 @@
 - name: Execute shell command and save results with Awk
   hosts: all
   gather_facts: yes
-tasks:
-  - name: 将当前包信息储存到变量中
-    shell: yum check-update
-    register: shell_output
+  tasks:
+    - name: 将当前包信息储存到变量中
+      shell: yum check-update
+      register: shell_output
 
-  - name: 提取每行前两列并保存到文件
-    copy:
-      content: "{{ item.split()[:2] | join(' ') }}"
-      dest: /tmp/yum_output.txt
-      mode: '0644'
-    loop: "{{ shell_output.stdout_lines }}"
+    - name: 提取每行前两列并保存到文件
+      copy:
+        content: "{{ item.split()[:2] | join(' ') }}"
+        dest: /tmp/yum_output.txt
+        mode: '0644'
+      loop: "{{ shell_output.stdout_lines }}"
