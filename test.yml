@@ -26,6 +26,11 @@
         exclude: kernel*  # 排除以 "kernel" 开头的软件包
       register: updated_packages
 
+    # Debug updated_packages variable
+    - name: Debug updated_packages variable
+      debug:
+        var: updated_packages
+
     # 将已更新的软件包信息保存到文件
     - name: Save updated package names and versions to a file
       copy:
@@ -34,4 +39,3 @@
           {{ package.name }}-{{ package.version }}  # 提取软件包名和版本号
           {% endfor %}
         dest: /tmp/updated_packages.txt  # 文件保存路径
-
