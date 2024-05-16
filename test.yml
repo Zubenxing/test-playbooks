@@ -6,11 +6,11 @@
     - name: 将当前包信息储存到变量中
       shell: yum check-update
       register: shell_output
-      changed_when: false
 
-    - name: 将旧包的信息输出到目录中
+    - name: 提取每行前两列并保存到文件
       copy:
-        content: "{{ item.split()[0] }} {{ item.split()[1] }}"
-        dest: "/tmp/shell_output.txt"
-        mode: "0644"
+          content: "{{ item.split()[:2] | join(' ') }}"
+        dest: /tmp/yum_output.txt
+        mode: '0644'
       loop: "{{ shell_output.stdout_lines }}"
+
